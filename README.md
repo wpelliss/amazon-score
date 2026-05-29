@@ -1,14 +1,16 @@
 # AmazonScore
 
-Extension Chrome qui score et trie les produits Amazon.fr par qualité.
+**v2.1** — Extension Chrome qui score et trie les produits Amazon.fr par qualité.
 
 ## Fonctionnement
 
-Moyenne pondérée de 3 facteurs, chacun noté /10 :
+Moyenne pondérée de 2 facteurs, chacun noté /10 :
 
 ```
-score = note(50%) + avis(30%) + prix(20%)
+score = note(65%) + avis(35%)
 ```
+
+Le prix est affiché dans le tooltip à titre informatif, sans contribution au score.
 
 **Note /5 → /10**
 - < 4.0 : médiocre (0–2)
@@ -21,10 +23,7 @@ score = note(50%) + avis(30%) + prix(20%)
 - 50–300 : moyen (4–8)
 - ≥ 1000 : parfait (10)
 
-**Prix → /10**
-- < 30€ : médiocre (0–5)
-- 30–100€ : moyen–bien (5–10)
-- ≥ 100€ : parfait (10)
+Si note ET avis sont indisponibles, le badge affiche `— (N/A)` en gris.
 
 ## Barème
 
