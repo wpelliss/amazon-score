@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "AmazonScore",
+  "description": "Score qualité intelligent pour vos achats Amazon",
+  "version": "2.0",
+  "content_scripts": [
+    {
+      "matches": ["https://www.amazon.fr/*"],
+      "js": [
+        "scoring.js",
+        "parser.js",
+        "ui.js",
+        "content.js"
+      ],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": "icon32.png"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "host_permissions": [
+    "https://www.amazon.fr/*"
+  ]
+}

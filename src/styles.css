@@ -1,0 +1,88 @@
+/* AmazonChooser — Badge styles */
+
+.ac-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: default;
+  line-height: 1.4;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Score colors */
+.ac-garbage    { color: #991b1b; background: #fee2e2; border: 1px solid #f87171; }
+.ac-trash      { color: #8B4513; background: #f5e6d3; border: 1px solid #d4a574; }
+.ac-common     { color: #444;    background: #f0f0f0; border: 1px solid #ccc; }
+.ac-rare       { color: #1a7a1a; background: #e6f5e6; border: 1px solid #7bc67b; }
+.ac-epic       { color: #7b2d8e; background: #f3e6f7; border: 1px solid #b87dc8; }
+.ac-legendary  { color: #c45200; background: #fff3e0; border: 1px solid #e8a045; }
+
+/* Tooltip */
+.ac-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 9999;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.ac-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 16px;
+  border: 6px solid transparent;
+  border-bottom-color: #1a1a2e;
+}
+
+.ac-badge:hover .ac-tooltip {
+  display: block;
+}
+
+/* Page produit : badge inline (pas absolute) */
+.ac-badge-inline {
+  position: relative;
+  top: auto;
+  left: auto;
+  font-size: 14px;
+  padding: 4px 14px;
+}
+
+.ac-product-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ac-bestseller-link {
+  color: #0066c0 !important;
+  background: #f0f7ff;
+  border: 1px solid #b8d4f0;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+.ac-bestseller-link:hover {
+  background: #e0eefa;
+  text-decoration: underline !important;
+}
