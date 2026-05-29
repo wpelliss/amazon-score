@@ -1,6 +1,7 @@
 # AmazonScore — Analyse Critique
 
 > Générée le 2026-05-30 par workflow multi-agents (56 agents, 3 phases de recherche web + 10 analystes spécialisés + 4 profils clients + 3 itérations de validation)
+> Complétée manuellement le 2026-05-30 : 2 points ajoutés (bug lien bestsellers, bouton déclenchement manuel)
 
 ## Executive Summary
 
@@ -28,6 +29,14 @@ Fakespot est fermé. RateBud existe mais cible le grand public anglophone. Sur a
 
 ### Critiques (bloquants pour usage fiable)
 
+**Bug lien bestsellers — pointe vers la catégorie générale au lieu de la sous-catégorie**
+`findBestsellersLink()` dans ui.js utilise `document.querySelector('.zg_hrsr li .a-list-item')` — `querySelector` retourne le **premier** item de la liste. Sur une fiche produit Amazon, `.zg_hrsr` liste les rangs du plus général au plus spécifique : le premier item est donc la catégorie racine (ex. "Jeux vidéo"), pas la sous-catégorie pertinente (ex. "Consoles Nintendo Switch"). L'utilisateur atterrit sur la mauvaise page de top des ventes.
+Correction : remplacer `querySelector` par `querySelectorAll` et prendre le **dernier** item — c'est celui dont le chemin est le plus spécifique.
+```js
+const items = [...document.querySelectorAll('.zg_hrsr li .a-list-item')];
+const subItem = items[items.length - 1]; // le plus spécifique
+```
+
 **Bug observer — recréation silencieusement impossible**
 Cause racine : `observer.disconnect()` ligne 21 de content.js sans `observer = null`. La condition `if (target && !observer)` dans `startObserver()` est donc toujours false après le premier run. L'observer est déconnecté et jamais recréé. Les produits chargés dynamiquement après la première passe (scroll infini sur /s, chargement lazy sur bestsellers) ne sont jamais scorés. Bug silencieux — visuellement tout semble fonctionner, mais la moitié de l'utilité disparaît sur les pages longues.
 Correction : ajouter `observer = null` après `observer.disconnect()` à la ligne 21. Remplacer `observer._debounce` par `let debounceTimer = null` dans la closure. 3 lignes.
@@ -54,8 +63,13 @@ Fix : `lines.forEach(line => { const div = document.createElement('div'); div.te
 Le bloc async de `invisibleScroll()` (content.js lignes 147-165) n'a pas de try/catch. Si `scrollPass()` lève une exception, `clearInterval(spinInterval)` et `overlay.remove()` ne sont jamais atteints. L'overlay reste figé indéfiniment — récupération uniquement par rechargement de page.
 Fix : wrapper le bloc async en try/catch avec cleanup dans le catch. 5 lignes.
 
+**Déclenchement automatique bestsellers — blocage inutile de la page**
+L'analyse bestsellers se déclenche automatiquement à chaque chargement de page `/bestsellers` ou `/gp/bestsellers`, ce qui bloque immédiatement la page avec l'overlay pendant 5-10s, même si l'utilisateur n'a pas l'intention de trier par score. Sur une navigation rapide (ouverture d'onglet, vérification rapide d'un produit), le blocage est systématique et inutile.
+Solution : remplacer le déclenchement automatique par un **bouton flottant** injecté en haut de `#zg-right-col` (ex. "Analyser et trier par score ▶"). L'overlay et le tri ne se déclenchent qu'au clic. Le bouton est retiré après exécution. L'utilisateur garde le contrôle total et la page reste utilisable par défaut.
+Impact : supprime le cas de friction le plus fréquent (page bloquée pour rien), sans rien retirer à la fonctionnalité.
+
 **Overlay bestsellers — UX anxiogène**
-Le voile sombre `rgba(0,0,0,0.35)` + z-index 999999 + spinner pendant 5-10s est la signature visuelle d'une attaque phishing pour tout utilisateur non-initié. Correction minimale : remplacer `'Analyse des produits…'` par `'AmazonScore analyse les produits…'` (1 ligne). Correction complète : bandeau localisé non-bloquant dans `#zg-right-col` — refactoring non trivial.
+Le voile sombre `rgba(0,0,0,0.35)` + z-index 999999 + spinner pendant 5-10s est la signature visuelle d'une attaque phishing pour tout utilisateur non-initié. Correction minimale (si déclenchement automatique conservé) : remplacer `'Analyse des produits…'` par `'AmazonScore analyse les produits…'` (1 ligne). Correction complète : bouton de déclenchement manuel (voir point ci-dessus).
 
 **Attribution manquante sur le badge**
 Aucun élément visuel ne relie 'Bon (7.3/10)' à AmazonScore. Pour tout utilisateur qui n'a pas installé l'extension lui-même, l'hypothèse première est bug Amazon ou phishing. Un `title='AmazonScore'` sur le badge résout le problème en 1 attribut.
@@ -141,7 +155,9 @@ Le concept est perçu comme utile partout. Le tooltip décomposé (quand découv
 Par ordre de retour sur investissement :
 
 1. `observer = null` après `disconnect()` — **1 ligne**, bug fonctionnel direct sur toutes les pages à scroll infini. Impact immédiat sur l'usage quotidien.
-2. Formule prix → 65/35 note/avis dans scoring.js — **5 lignes**. Supprimer `priceScore()` de `computeScore()`, passer `W_RATING` à 0.65 et `W_REVIEWS` à 0.35, garder le prix affiché dans le tooltip comme métadonnée informative. C'est la seule correction dont l'impact est visible à chaque usage.
+2. Lien bestsellers → `querySelectorAll` + dernier item — **2 lignes**, bug qui envoie sur la mauvaise page à chaque utilisation depuis une fiche produit.
+3. Bouton de déclenchement manuel bestsellers — **~20 lignes**, remplace le déclenchement automatique par un bouton flottant injecté dans `#zg-right-col`. Supprime le cas de friction le plus fréquent.
+4. Formule prix → 65/35 note/avis dans scoring.js — **5 lignes**. Supprimer `priceScore()` de `computeScore()`, passer `W_RATING` à 0.65 et `W_REVIEWS` à 0.35, garder le prix affiché dans le tooltip comme métadonnée informative. C'est la seule correction dont l'impact est visible à chaque usage.
 3. Score partiel sur données manquantes — **~25 lignes** dans `parseProducts()` et `parseProductPage()`. Calculer sur les facteurs disponibles quand exactement 2/3 sont présents, marquer `isPartialScore: true`, afficher '~7.2/10' dans le badge.
 4. Tooltip overflow viewport — **~10 lignes JS**. `getBoundingClientRect()` sur le badge + basculement conditionnel.
 5. Attribution overlay — **1 ligne**. `'Analyse des produits…'` → `'AmazonScore analyse les produits…'`.
