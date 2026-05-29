@@ -1,5 +1,5 @@
 /**
- * AmazonChooser — UI rendering
+ * AmazonScore — UI rendering
  *
  * Injecte les badges de rareté et les tooltips dans le DOM Amazon.
  * Gère le tri sur les pages bestsellers.
@@ -10,11 +10,14 @@ AC.ui = (() => {
 
   /**
    * Trouve le lien meilleures ventes le plus spécifique sur la page produit.
-   * Cherche d'abord dans .zg_hrsr (sous-catégorie), puis le lien principal.
+   * Cherche d'abord dans .zg_hrsr (sous-catégorie), prend le DERNIER item de la liste.
+   * Fallback sur le lien principal ref=pd_zg_ts_.
    */
   function findBestsellersLink() {
-    // Sous-catégorie (plus spécifique) : "1 en Consoles Nintendo Switch 2"
-    const subItem = document.querySelector('.zg_hrsr li .a-list-item');
+    // Sous-catégorie : prendre le DERNIER item (plus spécifique)
+    const items = document.querySelectorAll('.zg_hrsr li .a-list-item');
+    const subItem = items.length > 0 ? items[items.length - 1] : null;
+
     if (subItem) {
       const link = subItem.querySelector('a[href*="/bestsellers/"]');
       const text = subItem.textContent.trim();
@@ -31,7 +34,6 @@ AC.ui = (() => {
     // Catégorie principale : "7 en Jeux vidéo (Voir les 100 premiers...)"
     const mainLink = document.querySelector('a[href*="/gp/bestsellers/"][href*="ref=pd_zg_ts_"]');
     if (mainLink) {
-      // Le rang est dans le texte parent avant le lien
       const container = mainLink.closest('.a-list-item');
       if (container) {
         const text = container.textContent;
@@ -49,54 +51,107 @@ AC.ui = (() => {
     return null;
   }
 
+  /**
+   * Crée un noeud div de ligne pour le tooltip via DOM API (pas innerHTML).
+   */
+  function createTooltipLine(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div;
+  }
+
+  /**
+   * Crée le badge DOM pour un produit.
+   * Gère le cas score null (product.rarity === null) → badge ac-unknown.
+   */
   function createBadge(product) {
     const { rarity, rating, reviewCount, price, score } = product;
-    const scoreDisplay = score != null ? score.toFixed(1) : '?';
 
     const badge = document.createElement('div');
+    badge.title = 'AmazonScore';
+
+    // Cas score null : badge neutre sans tooltip de scores
+    if (rarity === null) {
+      badge.className = 'ac-badge ac-unknown';
+      const label = document.createElement('span');
+      label.className = 'ac-label';
+      label.textContent = '— (N/A)';
+      badge.appendChild(label);
+      return badge;
+    }
+
+    const scoreDisplay = score != null ? score.toFixed(1) : '?';
+
     badge.className = `ac-badge ac-${rarity.key}`;
 
-    // Label principal
+    // Label principal avec affordance tooltip
     const label = document.createElement('span');
     label.className = 'ac-label';
-    label.textContent = `${rarity.label} (${scoreDisplay}/10)`;
+    label.textContent = `ℹ ${rarity.label} (${scoreDisplay}/10)`;
     badge.appendChild(label);
 
-    // Tooltip avec détail du scoring
+    // Tooltip avec détail du scoring — DOM API pure, pas de innerHTML
     const tooltip = document.createElement('div');
     tooltip.className = 'ac-tooltip';
 
-    const lines = [];
     if (rating != null) {
       const rs = AC.scoring.ratingScore(rating);
-      lines.push(`Note : ${rating.toFixed(1)}/5 → ${rs.toFixed(1)}/10 (50%)`);
+      tooltip.appendChild(createTooltipLine(`Note : ${rating.toFixed(1)}/5 → ${rs.toFixed(1)}/10 (65% du score)`));
     }
     if (reviewCount != null) {
       const rs = AC.scoring.reviewsScore(reviewCount);
       const warn = reviewCount < 50 ? ' ⚠' : '';
-      lines.push(`Avis : ${reviewCount.toLocaleString('fr-FR')}${warn} → ${rs.toFixed(1)}/10 (30%)`);
+      tooltip.appendChild(createTooltipLine(`Avis : ${reviewCount.toLocaleString('fr-FR')}${warn} → ${rs.toFixed(1)}/10 (35% du score)`));
     }
     if (price != null) {
-      const ps = AC.scoring.priceScore(price);
-      lines.push(`Prix : ${price.toFixed(2)}€ → ${ps.toFixed(1)}/10 (20%)`);
+      tooltip.appendChild(createTooltipLine(`Prix : ${price.toFixed(2)}€ (info)`));
     }
     if (score != null) {
-      lines.push(`Score final : ${score.toFixed(1)}/10`);
+      tooltip.appendChild(createTooltipLine(`Score final : ${score.toFixed(1)}/10`));
     }
 
-    tooltip.innerHTML = lines.join('<br>');
     badge.appendChild(tooltip);
+
+    // Tooltip flip : détection de débordement après insertion dans le DOM
+    badge.addEventListener('mouseenter', () => {
+      // Rendre visible pour mesurer (display: block transitoire via classe)
+      tooltip.style.visibility = 'hidden';
+      tooltip.style.display = 'block';
+
+      const rect = tooltip.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Flip horizontal : débordement à droite
+      if (rect.right > vw) {
+        tooltip.classList.add('ac-tooltip--flip-x');
+      } else {
+        tooltip.classList.remove('ac-tooltip--flip-x');
+      }
+
+      // Flip vertical : débordement en bas
+      if (rect.bottom > vh) {
+        tooltip.classList.add('ac-tooltip--flip-y');
+      } else {
+        tooltip.classList.remove('ac-tooltip--flip-y');
+      }
+
+      tooltip.style.visibility = '';
+      tooltip.style.display = '';
+    });
 
     return badge;
   }
 
   function renderBadges(products) {
     for (const product of products) {
-      if (!product.rarity) continue;
-
       // Eviter les doublons : marqueur sur l'élément
       if (product.el.hasAttribute('data-ac-done')) continue;
       product.el.setAttribute('data-ac-done', '1');
+
+      // Accepter rarity === null (score null) — badge ac-unknown quand même
+      // On skip uniquement si rarity est undefined (produit non analysé)
+      if (product.rarity === undefined) continue;
 
       const badge = createBadge(product);
 

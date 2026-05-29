@@ -1,7 +1,7 @@
 /**
  * AmazonChooser v2.0 — Point d'entrée
  *
- * - Bestsellers : scroll invisible pour charger tous les produits, puis scoring
+ * - Bestsellers : bouton trigger → scroll invisible pour charger tous les produits, puis scoring
  * - Produit : attente que les éléments de notation soient chargés, puis scoring
  * - Recherche : scoring direct
  * - MutationObserver pour les chargements dynamiques
@@ -9,6 +9,7 @@
 (() => {
   let running = false;
   let observer = null;
+  let debounceTimer = null;
 
   function run() {
     if (running) return;
@@ -18,7 +19,10 @@
       const { pageType, products } = AC.parser.parseProducts();
       if (!pageType || products.length === 0) return;
 
-      if (observer) observer.disconnect();
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
       AC.ui.renderBadges(products);
       AC.ui.sortProducts(pageType, products);
       startObserver();
@@ -33,8 +37,8 @@
     );
     if (target && !observer) {
       observer = new MutationObserver(() => {
-        clearTimeout(observer._debounce);
-        observer._debounce = setTimeout(run, 800);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(run, 800);
       });
       observer.observe(target, { childList: true, subtree: true });
     }
@@ -110,7 +114,7 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 13px; color: #555; font-weight: 500;
       `;
-      label.textContent = 'Analyse des produits…';
+      label.textContent = 'AmazonScore — Analyse en cours…';
 
       let angle = 0;
       const spinInterval = setInterval(() => {
@@ -145,34 +149,58 @@
       }
 
       (async () => {
-        let prevHeight = 0;
-        while (passes < maxPasses) {
-          await scrollPass();
-          passes++;
-          const newHeight = document.body.scrollHeight;
-          if (newHeight <= prevHeight) break;
-          prevHeight = newHeight;
-        }
+        try {
+          let prevHeight = 0;
+          while (passes < maxPasses) {
+            await scrollPass();
+            passes++;
+            const newHeight = document.body.scrollHeight;
+            if (newHeight <= prevHeight) break;
+            prevHeight = newHeight;
+          }
 
-        window.scrollTo(0, savedScroll);
-        clearInterval(spinInterval);
-        overlay.style.transition = 'opacity 0.3s ease';
-        overlay.style.opacity = '0';
-        setTimeout(() => {
+          window.scrollTo(0, savedScroll);
+          overlay.style.transition = 'opacity 0.3s ease';
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            overlay.remove();
+            resolve();
+          }, 300);
+        } catch (e) {
           overlay.remove();
           resolve();
-        }, 300);
+        } finally {
+          clearInterval(spinInterval);
+        }
       })();
     });
+  }
+
+  /**
+   * Injecte un bouton déclencheur en haut de la colonne bestsellers.
+   * Le clic lance le scroll invisible puis le scoring.
+   */
+  function injectTriggerButton() {
+    const container = document.querySelector('#zg-right-col') ||
+                      document.querySelector('#zg_browseRoot');
+    if (!container) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'ac-trigger-btn';
+    btn.textContent = 'AmazonScore — Analyser et trier ▶';
+    btn.addEventListener('click', () => {
+      btn.remove();
+      invisibleScroll().then(() => run());
+    });
+
+    container.insertBefore(btn, container.firstChild);
   }
 
   // --- Lancement selon le type de page ---
   const pageType = AC.parser.detectPageType();
 
   if (pageType === 'bestsellers') {
-    invisibleScroll().then(() => {
-      run();
-    });
+    injectTriggerButton();
   } else if (pageType === 'product') {
     // Attendre que le bloc notation soit chargé par Amazon
     waitForProductData().then(() => {

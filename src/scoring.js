@@ -1,8 +1,8 @@
 /**
  * AmazonChooser — Scoring engine
  *
- * Moyenne pondérée de 3 facteurs, chacun noté sur 10 :
- *   score = noteScore × 50% + avisScore × 30% + prixScore × 20%
+ * Moyenne pondérée de 2 facteurs, chacun noté sur 10 :
+ *   score = noteScore × 65% + avisScore × 35%
  *
  * Chaque facteur suit des paliers avec interpolation lisse.
  */
@@ -60,32 +60,13 @@ AC.scoring = (() => {
     ]);
   }
 
-  /**
-   * Prix → score /10
-   * <30€   Médiocre (0-3)
-   * 30€+   Moyen (5)
-   * 40€+   Qualité (7)
-   * 100€+  Parfait (10)
-   */
-  function priceScore(price) {
-    return interpolate(price, [
-      [5,    1],
-      [30,   5],
-      [40,   7],
-      [100, 10],
-      [1000, 10],
-    ]);
-  }
-
   // Poids
-  const W_RATING  = 0.50;
-  const W_REVIEWS = 0.30;
-  const W_PRICE   = 0.20;
+  const W_RATING  = 0.65;
+  const W_REVIEWS = 0.35;
 
-  function computeScore(rating, reviewCount, price) {
+  function computeScore(rating, reviewCount) {
     const score = ratingScore(rating) * W_RATING
-                + reviewsScore(reviewCount) * W_REVIEWS
-                + priceScore(price) * W_PRICE;
+                + reviewsScore(reviewCount) * W_REVIEWS;
     return Math.max(0, Math.min(10, score));
   }
 
@@ -111,12 +92,12 @@ AC.scoring = (() => {
   function assignRarities(products) {
     for (const p of products) {
       if (p.score == null) {
-        p.rarity = getRarity(-1);
+        p.rarity = null;
         continue;
       }
       p.rarity = getRarity(p.score);
     }
   }
 
-  return { computeScore, getRarity, assignRarities, ratingScore, reviewsScore, priceScore };
+  return { computeScore, getRarity, assignRarities, ratingScore, reviewsScore };
 })();

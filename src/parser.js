@@ -18,10 +18,9 @@ AC.parser = (() => {
     const kMatch = text.match(/(\d+)[.,]?(\d*)\s*k/i);
     if (kMatch) {
       const whole = parseInt(kMatch[1]);
-      const frac = kMatch[2] ? parseInt(kMatch[2]) : 0;
-      return whole * 1000 + frac * 100;
+      return Math.round((whole + parseFloat('0.' + (kMatch[2] || '0'))) * 1000);
     }
-    const cleaned = text.replace(/[\s.\u00a0()]/g, '');
+    const cleaned = text.replace(/[\s. ()]/g, '');
     const num = parseInt(cleaned);
     return (!isNaN(num) && num > 0) ? num : null;
   }
@@ -39,7 +38,7 @@ AC.parser = (() => {
 
   function extractPrice(text) {
     if (!text) return null;
-    const cleaned = text.replace(/[€$£\s\u00a0]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.');
+    const cleaned = text.replace(/[€$£\s ]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.');
     const num = parseFloat(cleaned);
     return (!isNaN(num) && num > 0) ? num : null;
   }
@@ -63,7 +62,8 @@ AC.parser = (() => {
     );
 
     // Prix : input hidden en priorité (toujours dans le HTML initial),
-    // puis blocs de prix classiques en fallback
+    // puis blocs de prix classiques en fallback.
+    // Le prix est extrait pour affichage dans le tooltip uniquement — il ne contribue pas au score.
     const priceInput = document.querySelector('#twister-plus-price-data-price')?.value;
     const price = (priceInput && parseFloat(priceInput)) || extractPrice(
       document.querySelector('#corePrice_feature_div .a-price .a-offscreen')?.textContent
@@ -76,8 +76,10 @@ AC.parser = (() => {
 
     if (rating == null && reviewCount == null && price == null) return null;
 
-    const score = (rating != null && reviewCount != null && price != null)
-      ? AC.scoring.computeScore(rating, reviewCount, price)
+    // Score null si rating ET reviewCount tous les deux absents.
+    // Un price seul ne suffit pas à calculer un score.
+    const score = (rating != null && reviewCount != null)
+      ? AC.scoring.computeScore(rating, reviewCount)
       : null;
 
     return { el, rating, reviewCount, price, score, originalRank: 0, isProductPage: true };
@@ -105,7 +107,7 @@ AC.parser = (() => {
       () => {
         const links = el.querySelectorAll('a[href*="#customerReviews"]');
         for (const link of links) {
-          const text = link.textContent.replace(/[\s.\u00a0]/g, '');
+          const text = link.textContent.replace(/[\s. ]/g, '');
           const match = text.match(/^(\d+)/);
           if (match && parseInt(match[1]) > 10) return match[1];
         }
@@ -115,8 +117,8 @@ AC.parser = (() => {
       () => {
         const spans = el.querySelectorAll('span.a-size-base, span.a-size-small');
         for (const s of spans) {
-          const cleaned = s.textContent.replace(/[\s.\u00a0]/g, '');
-          if (/^\d+$/.test(cleaned) && parseInt(cleaned) > 0) return cleaned;
+          const cleaned = s.textContent.replace(/[\s. ]/g, '');
+          if (/^\d+$/.test(cleaned) && parseInt(cleaned) > 10) return cleaned;
         }
         return null;
       },
@@ -146,7 +148,10 @@ AC.parser = (() => {
 
   function detectPageType() {
     const path = window.location.pathname;
-    if (path === '/s' || path.startsWith('/s?') || path.startsWith('/s/')) return 'search';
+    // Note : path === '/s' et path.startsWith('/s/') couvrent les recherches.
+    // La branche '/s?' (query string) est intentionnellement absente : dead code confirmé,
+    // les query strings n'apparaissent pas dans pathname.
+    if (path === '/s' || path.startsWith('/s/')) return 'search';
     if (path.includes('/dp/') || path.includes('/gp/product/')) return 'product';
     if (path.includes('/bestsellers') || path.includes('/gp/bestsellers')) return 'bestsellers';
     return null;
@@ -196,12 +201,15 @@ AC.parser = (() => {
         const el = elements[i];
         const rating = parseRating(el);
         const reviewCount = parseReviewCount(el);
+        // Prix extrait pour le tooltip uniquement — ne contribue pas au score.
         const price = parsePrice(el);
 
         if (rating == null && reviewCount == null && price == null) continue;
 
-        const score = (rating != null && reviewCount != null && price != null)
-          ? AC.scoring.computeScore(rating, reviewCount, price)
+        // Score null si rating ET reviewCount tous les deux absents.
+        // Un price seul (ou avec un seul des deux) ne génère pas de score partiel.
+        const score = (rating != null && reviewCount != null)
+          ? AC.scoring.computeScore(rating, reviewCount)
           : null;
 
         products.push({ el, rating, reviewCount, price, score, originalRank: i });

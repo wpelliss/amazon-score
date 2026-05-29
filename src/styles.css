@@ -1,4 +1,4 @@
-/* AmazonChooser — Badge styles */
+/* AmazonScore — Badge styles */
 
 .ac-badge {
   position: absolute;
@@ -14,7 +14,7 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  cursor: default;
+  cursor: pointer;
   line-height: 1.4;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
@@ -27,12 +27,17 @@
 .ac-epic       { color: #7b2d8e; background: #f3e6f7; border: 1px solid #b87dc8; }
 .ac-legendary  { color: #c45200; background: #fff3e0; border: 1px solid #e8a045; }
 
+/* Badge neutre — score null (rating ET reviewCount tous deux absents) */
+.ac-unknown    { color: #666;    background: #f5f5f5; border: 1px solid #ddd; cursor: default; }
+
 /* Tooltip */
 .ac-tooltip {
   display: none;
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
+  right: auto;
+  bottom: auto;
   z-index: 9999;
   background: #1a1a2e;
   color: #e0e0e0;
@@ -51,12 +56,35 @@
   position: absolute;
   bottom: 100%;
   left: 16px;
+  right: auto;
   border: 6px solid transparent;
   border-bottom-color: #1a1a2e;
 }
 
 .ac-badge:hover .ac-tooltip {
   display: block;
+}
+
+/* Tooltip flip — debordement horizontal : alignement a droite du badge */
+.ac-tooltip--flip-x {
+  left: auto;
+  right: 0;
+}
+.ac-tooltip--flip-x::after {
+  left: auto;
+  right: 16px;
+}
+
+/* Tooltip flip — debordement vertical : tooltip au-dessus du badge */
+.ac-tooltip--flip-y {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+.ac-tooltip--flip-y::after {
+  bottom: auto;
+  top: 100%;
+  border-bottom-color: transparent;
+  border-top-color: #1a1a2e;
 }
 
 /* Page produit : badge inline (pas absolute) */
@@ -85,4 +113,27 @@
 .ac-bestseller-link:hover {
   background: #e0eefa;
   text-decoration: underline !important;
+}
+
+/* Bouton declencheur analyse bestsellers */
+.ac-trigger-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  background: #fff3e0;
+  border: 1px solid #e8a045;
+  border-radius: 6px;
+  color: #c45200;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.ac-trigger-btn:hover {
+  background: #ffe0b2;
+  border-color: #c45200;
 }
