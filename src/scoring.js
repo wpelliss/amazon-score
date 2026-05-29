@@ -115,5 +115,5 @@ AC.scoring = (() => {
     }
   }
 
-  return { computeScore, assignRarities, getRarityFromThresholds, getAvisHint, ratingScore, reviewsScore, priceScore };
+  return { computeScore, assignRarities, getRarityFromThresholds, getAvisHint, ratingScore, reviewsScore };
 })();
