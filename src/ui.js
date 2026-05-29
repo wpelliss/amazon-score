@@ -169,8 +169,11 @@ AC.ui = (() => {
 
       const badge = createBadge(product);
 
-      // Stocker score + rang original pour le tri
-      product.el.setAttribute('data-ac-score', product.score != null ? product.score.toFixed(4) : '-1');
+      // Clé de tri : rareté en priorité, puis nombre d'avis en tiebreaker
+      const RARITY_LEVEL = { legendary: 5, epic: 4, rare: 3, common: 2, trash: 1, garbage: 0 };
+      const rarityLevel = product.rarity ? (RARITY_LEVEL[product.rarity.key] ?? -1) : -1;
+      const sortKey = rarityLevel * 1000000 + (product.reviewCount || 0);
+      product.el.setAttribute('data-ac-score', sortKey);
       product.el.setAttribute('data-ac-rank', product.originalRank);
 
       // Insertion selon le type de page
