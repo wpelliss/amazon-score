@@ -14,14 +14,34 @@ AC.ui = (() => {
    * Fallback sur le lien principal ref=pd_zg_ts_.
    */
   function findBestsellersLink() {
-    // Sous-catégorie : prendre le DERNIER item (plus spécifique)
-    const items = document.querySelectorAll('.zg_hrsr li .a-list-item');
-    const subItem = items.length > 0 ? items[items.length - 1] : null;
+    // Stratégie 1 : chercher tout lien avec un nodeId numérique dans le chemin
+    // Format cible : /gp/bestsellers/hi/2677581031 (nodeId = 5+ chiffres)
+    const nodePattern = /\/gp\/bestsellers\/([^\/\?#]+)\/(\d{5,})/;
+    const allLinks = [...document.querySelectorAll('a[href*="/gp/bestsellers/"]')];
+    const specificLinks = allLinks.filter(a => nodePattern.test(a.pathname));
 
-    if (subItem) {
+    if (specificLinks.length > 0) {
+      // Le dernier = sous-catégorie la plus spécifique (Amazon liste du général au spécifique)
+      const link = specificLinks[specificLinks.length - 1];
+      const match = link.pathname.match(nodePattern);
+      const category = link.textContent.trim();
+      const container = link.closest('li, .a-list-item, span.a-list-item');
+      const rankText = container ? container.textContent : '';
+      const rankMatch = rankText.match(/[#nN°°]\s*(\d+)/);
+      return {
+        url: `https://www.amazon.fr/gp/bestsellers/${match[1]}/${match[2]}`,
+        rank: rankMatch ? parseInt(rankMatch[1]) : null,
+        category,
+      };
+    }
+
+    // Stratégie 2 : fallback .zg_hrsr (structure ancienne)
+    const zgItems = [...document.querySelectorAll('.zg_hrsr li .a-list-item')];
+    if (zgItems.length > 0) {
+      const subItem = zgItems[zgItems.length - 1];
       const link = subItem.querySelector('a[href*="/bestsellers/"]');
       const text = subItem.textContent.trim();
-      const rankMatch = text.match(/^(\d+)\s*en\s*/);
+      const rankMatch = text.match(/(\d+)\s*en\s*/);
       if (link && rankMatch) {
         return {
           url: link.href,
@@ -31,7 +51,7 @@ AC.ui = (() => {
       }
     }
 
-    // Catégorie principale : "7 en Jeux vidéo (Voir les 100 premiers...)"
+    // Stratégie 3 : catégorie principale sans nodeId (dernier recours)
     const mainLink = document.querySelector('a[href*="/gp/bestsellers/"][href*="ref=pd_zg_ts_"]');
     if (mainLink) {
       const container = mainLink.closest('.a-list-item');
