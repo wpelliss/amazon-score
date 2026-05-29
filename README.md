@@ -43,14 +43,3 @@ Zéro dépendance, vanilla JS.
 2. `chrome://extensions` → activer le mode développeur
 3. "Charger l'extension non empaquetée" → sélectionner le dossier `src/`
 
-## Roadmap
-
-### Fonctionnalités
-- [ ] Popup options : pondérations et seuils de couleurs personnalisables
-- [ ] `chrome.storage.sync` pour persister les préférences
-- [ ] Badge sur l'icône extension avec le nombre de produits scorés
-- [ ] Support multi-domaines (amazon.com, .de, .es, .it)
-
-### Publication
-- [ ] Icônes SVG
-- [ ] Page Chrome Web Store
