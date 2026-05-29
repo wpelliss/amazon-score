@@ -71,33 +71,49 @@ AC.scoring = (() => {
   }
 
   /**
-   * Rareté par seuils absolus
+   * Rareté par combinaison note min + avis min (ordre du meilleur au moins bon).
    */
-  const RARITIES = [
-    { min: 9,  label: "Parfait",      key: "legendary" },
-    { min: 8,  label: "Exceptionnel", key: "epic" },
-    { min: 7,  label: "Bon",          key: "rare" },
-    { min: 5,  label: "Moyen",        key: "common" },
-    { min: 3,  label: "Mauvais",      key: "trash" },
-    { min: -Infinity, label: "A jeter", key: "garbage" },
+  const RARITY_THRESHOLDS = [
+    { noteMin: 4.7, avisMin: 100, label: "Parfait",      key: "legendary" },
+    { noteMin: 4.5, avisMin: 100, label: "Exceptionnel", key: "epic"      },
+    { noteMin: 4.0, avisMin: 100, label: "Bon",          key: "rare"      },
+    { noteMin: 4.0, avisMin: 50,  label: "Moyen",        key: "common"    },
+    { noteMin: 4.0, avisMin: 10,  label: "Mauvais",      key: "trash"     },
   ];
 
-  function getRarity(score) {
-    for (const r of RARITIES) {
-      if (score >= r.min) return r;
+  const RARITY_GARBAGE = { label: "A jeter", key: "garbage" };
+
+  function getRarityFromThresholds(rating, reviewCount) {
+    if (rating == null || reviewCount == null) return null;
+    for (const t of RARITY_THRESHOLDS) {
+      if (rating >= t.noteMin && reviewCount >= t.avisMin) {
+        return { label: t.label, key: t.key };
+      }
     }
-    return RARITIES[RARITIES.length - 1];
+    return RARITY_GARBAGE;
+  }
+
+  /**
+   * Retourne le prochain palier atteignable avec plus d'avis (note inchangée).
+   * Ex : { nextLabel: "Bon", need: 100, gap: 23 }
+   */
+  function getAvisHint(rating, reviewCount) {
+    if (rating == null || reviewCount == null) return null;
+    // Parcourir du moins bon au meilleur parmi ceux que la note permet d'atteindre
+    const reachable = RARITY_THRESHOLDS.filter(t => rating >= t.noteMin).reverse();
+    for (const t of reachable) {
+      if (reviewCount < t.avisMin) {
+        return { nextLabel: t.label, need: t.avisMin, gap: t.avisMin - reviewCount };
+      }
+    }
+    return null;
   }
 
   function assignRarities(products) {
     for (const p of products) {
-      if (p.score == null) {
-        p.rarity = null;
-        continue;
-      }
-      p.rarity = getRarity(p.score);
+      p.rarity = getRarityFromThresholds(p.rating, p.reviewCount);
     }
   }
 
-  return { computeScore, getRarity, assignRarities, ratingScore, reviewsScore };
+  return { computeScore, assignRarities, getRarityFromThresholds, getAvisHint, ratingScore, reviewsScore, priceScore };
 })();

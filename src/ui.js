@@ -100,34 +100,28 @@ AC.ui = (() => {
       return badge;
     }
 
-    const scoreDisplay = score != null ? score.toFixed(1) : '?';
-
     badge.className = `ac-badge ac-${rarity.key}`;
 
     // Label principal avec affordance tooltip
     const label = document.createElement('span');
     label.className = 'ac-label';
-    label.textContent = `ℹ ${rarity.label} (${scoreDisplay}/10)`;
+    label.textContent = `ℹ ${rarity.label}`;
     badge.appendChild(label);
 
-    // Tooltip avec détail du scoring — DOM API pure, pas de innerHTML
+    // Tooltip : note brute + avis + prix + hint prochain palier
     const tooltip = document.createElement('div');
     tooltip.className = 'ac-tooltip';
 
     if (rating != null) {
-      const rs = AC.scoring.ratingScore(rating);
-      tooltip.appendChild(createTooltipLine(`Note : ${rating.toFixed(1)}/5 → ${rs.toFixed(1)}/10 (65% du score)`));
+      tooltip.appendChild(createTooltipLine(`Note : ${rating.toFixed(1)} / 5`));
     }
     if (reviewCount != null) {
-      const rs = AC.scoring.reviewsScore(reviewCount);
-      const warn = reviewCount < 50 ? ' ⚠' : '';
-      tooltip.appendChild(createTooltipLine(`Avis : ${reviewCount.toLocaleString('fr-FR')}${warn} → ${rs.toFixed(1)}/10 (35% du score)`));
+      const hint = AC.scoring.getAvisHint(rating, reviewCount);
+      const hintText = hint ? ` (+${hint.gap} pour ${hint.nextLabel})` : '';
+      tooltip.appendChild(createTooltipLine(`Avis : ${reviewCount.toLocaleString('fr-FR')}${hintText}`));
     }
     if (price != null) {
-      tooltip.appendChild(createTooltipLine(`Prix : ${price.toFixed(2)}€ (info)`));
-    }
-    if (score != null) {
-      tooltip.appendChild(createTooltipLine(`Score final : ${score.toFixed(1)}/10`));
+      tooltip.appendChild(createTooltipLine(`Prix : ${price.toFixed(2)} €`));
     }
 
     badge.appendChild(tooltip);
