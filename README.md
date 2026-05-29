@@ -1,56 +1,75 @@
-# AmazonScore - Score Qualité Amazon
-
-**Statut : Terminé (v2.0)**
+# AmazonScore
 
 Extension Chrome qui score et trie les produits Amazon.fr par qualité.
 
-**Sources** : `../amazon-score/src/`
+## Fonctionnement
 
-## Formule
+Moyenne pondérée de 3 facteurs, chacun noté /10 :
+
 ```
-score_brut = (note_étoiles_décimale) × nombre_avis × prix / 100000
-score_final = percentile du score_brut sur la page (0-100%)
+score = note(50%) + avis(30%) + prix(20%)
 ```
-Catégories RPG : Déchet (≤0) | Ordinaire (>0) | Rare (≥50%) | Épique (≥75%) | Légendaire (≥95%)
+
+**Note /5 → /10**
+- < 4.0 : médiocre (0–2)
+- 4.0–4.5 : acceptable (5–8)
+- 4.5–4.7 : bien (8–10)
+- ≥ 4.7 : parfait (10)
+
+**Nombre d'avis → /10**
+- < 50 : médiocre (0–4)
+- 50–300 : moyen (4–8)
+- ≥ 1000 : parfait (10)
+
+**Prix → /10**
+- < 30€ : médiocre (0–5)
+- 30–100€ : moyen–bien (5–10)
+- ≥ 100€ : parfait (10)
+
+## Barème
+
+| Score | Label |
+|---|---|
+| ≥ 9 | Parfait |
+| ≥ 8 | Exceptionnel |
+| ≥ 7 | Bon |
+| ≥ 5 | Moyen |
+| ≥ 3 | Mauvais |
+| < 3 | A jeter |
 
 ## Pages supportées
-- `/s` (recherche) : `.s-result-list` | `/gp` (meilleures ventes) : `#zg-right-col`
 
-## Analyse du code actuel (content.js, 127 lignes)
+- **Recherche** (`/s`) : badge sur chaque résultat
+- **Meilleures ventes** (`/bestsellers`, `/gp/bestsellers`) : scroll invisible pour charger tous les produits, tri par score, lien vers la page meilleures ventes depuis une fiche produit
+- **Fiche produit** (`/dp/`, `/gp/product/`) : badge inline à côté des étoiles, attente du chargement différé Amazon
 
-### Bugs critiques
-1. **Boucle dupliquée** : parcours identique 2 fois (1 pour scores, 1 pour affichage) → fusionner
-2. **`liste.sort()` dans la boucle** : tri recalculé à chaque itération → sortir avant la boucle
-3. **Parsing note fragile** : `note[0]+note[2]` lit des chars ASCII → utiliser parseFloat/regex
-4. **Parsing prix fragile** : cascade de split('&nbsp;',',','€','>') → regex unique
-5. **jQuery pour 3 lignes** : le tri final → remplacer par Array.from + sort + append
-6. **Pas de MutationObserver** : contenu dynamique/pagination non détecté
-7. **Aucune gestion d'erreur** : crash silencieux si élément manquant
+## Architecture (v2.0)
 
-### Architecture à refaire
-- `window.onload` → observer 2 étages de chrome-utils.js (comme PDB Score et SenscritiqueLovemeter)
-- Sélecteurs hardcodés → `ExtractionRegistry` avec fallback chain (si Amazon change le DOM, le tier suivant prend le relais)
-- Code procédural → fonctions claires (extractData, calcScore, renderScore, sortProducts)
+```
+src/
+├── manifest.json   Manifest V3
+├── scoring.js      Moteur de scoring (interpolation par paliers)
+├── parser.js       Extraction DOM (note / avis / prix, fallbacks multi-sélecteurs)
+├── ui.js           Rendu badges + tooltips + tri bestsellers
+└── content.js      Point d'entrée (détection page, scroll invisible, MutationObserver)
+```
 
-## Plan de finalisation
+Zéro dépendance, vanilla JS.
 
-### Phase 1 — Réécriture du content.js
-- [ ] Supprimer jQuery, tout en vanilla JS
-- [ ] Parsing robuste : utiliser `parseNumber()` de chrome-utils.js
-- [ ] Boucle unique : extraire données → calculer scores → trier → afficher
-- [ ] `ExtractionRegistry` de chrome-utils.js pour les sélecteurs (fallback chain si Amazon change le DOM)
-- [ ] `createTwoStageObserver` de chrome-utils.js pour le contenu dynamique/pagination
-- [ ] Try/catch sur chaque produit (skip silencieux si données manquantes)
+## Installation (non publié)
 
-### Phase 2 — Fonctionnalités
-- [ ] Popup options : seuils de couleurs personnalisables, pondérations note/avis/prix
-- [ ] Support multi-domaines : amazon.com, .de, .es, .it (adapter sélecteurs + format prix)
+1. Cloner le repo
+2. `chrome://extensions` → activer le mode développeur
+3. "Charger l'extension non empaquetée" → sélectionner le dossier `src/`
+
+## Roadmap
+
+### Fonctionnalités
+- [ ] Popup options : pondérations et seuils de couleurs personnalisables
+- [ ] `chrome.storage.sync` pour persister les préférences
 - [ ] Badge sur l'icône extension avec le nombre de produits scorés
-- [ ] chrome.storage.sync pour sauvegarder les préférences
+- [ ] Support multi-domaines (amazon.com, .de, .es, .it)
 
-### Phase 3 — Publication
-- [ ] Page Chrome Web Store (description, screenshots)
-- [ ] Icônes propres (SVG)
-
-## Source
-[_archives/sources/AmazonChooser/](../_archives/sources/AmazonChooser/)
+### Publication
+- [ ] Icônes SVG
+- [ ] Page Chrome Web Store
