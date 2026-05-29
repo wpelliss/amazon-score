@@ -1,0 +1,19 @@
+# Claude Code
+.claude/
+
+# Fichiers de suivi locaux
+STATE.md
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (si jamais)
+node_modules/
