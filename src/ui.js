@@ -191,7 +191,7 @@ AC.ui = (() => {
           const link = document.createElement('a');
           link.href = bsLink.url;
           link.className = 'ac-badge-inline ac-bestseller-link';
-          link.textContent = `#${bsLink.rank} ${bsLink.category}`;
+          link.textContent = `Top des ventes · ${bsLink.category}`;
           link.title = `Voir les meilleures ventes en ${bsLink.category}`;
           wrapper.appendChild(link);
         }
