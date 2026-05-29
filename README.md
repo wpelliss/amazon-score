@@ -1,56 +1,38 @@
 # AmazonScore
 
-**v2.1** — Extension Chrome qui score et trie les produits Amazon.fr par qualité.
+**v2.2** — Extension Chrome qui évalue et trie les produits Amazon.fr par qualité.
 
 ## Fonctionnement
 
-Moyenne pondérée de 2 facteurs, chacun noté /10 :
+La rareté est déterminée directement par des seuils combinés **note + nombre d'avis** :
 
-```
-score = note(65%) + avis(35%)
-```
+| Rareté | Note min | Avis min |
+|---|---|---|
+| Parfait | ≥ 4.7 | ≥ 100 |
+| Exceptionnel | ≥ 4.5 | ≥ 100 |
+| Bon | ≥ 4.0 | ≥ 100 |
+| Moyen | ≥ 4.0 | ≥ 50 |
+| Mauvais | ≥ 4.0 | ≥ 10 |
+| A jeter | tout le reste | — |
 
-Le prix est affiché dans le tooltip à titre informatif, sans contribution au score.
-
-**Note /5 → /10**
-- < 4.0 : médiocre (0–2)
-- 4.0–4.5 : acceptable (5–8)
-- 4.5–4.7 : bien (8–10)
-- ≥ 4.7 : parfait (10)
-
-**Nombre d'avis → /10**
-- < 50 : médiocre (0–4)
-- 50–300 : moyen (4–8)
-- ≥ 1000 : parfait (10)
-
+Le tooltip affiche note, nombre d'avis, prix, et indique le prochain palier atteignable.
 Si note ET avis sont indisponibles, le badge affiche `— (N/A)` en gris.
-
-## Barème
-
-| Score | Label |
-|---|---|
-| ≥ 9 | Parfait |
-| ≥ 8 | Exceptionnel |
-| ≥ 7 | Bon |
-| ≥ 5 | Moyen |
-| ≥ 3 | Mauvais |
-| < 3 | A jeter |
 
 ## Pages supportées
 
 - **Recherche** (`/s`) : badge sur chaque résultat
-- **Meilleures ventes** (`/bestsellers`, `/gp/bestsellers`) : scroll invisible pour charger tous les produits, tri par score, lien vers la page meilleures ventes depuis une fiche produit
-- **Fiche produit** (`/dp/`, `/gp/product/`) : badge inline à côté des étoiles, attente du chargement différé Amazon
+- **Meilleures ventes** (`/bestsellers`, `/gp/bestsellers`) : bouton de déclenchement → scroll invisible + tri par rareté puis avis
+- **Fiche produit** (`/dp/`, `/gp/product/`) : badge inline à côté des étoiles + lien "Top des ventes · Catégorie"
 
-## Architecture (v2.0)
+## Architecture (v2.2)
 
 ```
 src/
 ├── manifest.json   Manifest V3
-├── scoring.js      Moteur de scoring (interpolation par paliers)
+├── scoring.js      Seuils de rareté note+avis, hint prochain palier
 ├── parser.js       Extraction DOM (note / avis / prix, fallbacks multi-sélecteurs)
-├── ui.js           Rendu badges + tooltips + tri bestsellers
-└── content.js      Point d'entrée (détection page, scroll invisible, MutationObserver)
+├── ui.js           Rendu badges + tooltips + tri bestsellers + lien Top des ventes
+└── content.js      Point d'entrée (détection page, bouton trigger, MutationObserver)
 ```
 
 Zéro dépendance, vanilla JS.
