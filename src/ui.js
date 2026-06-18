@@ -169,10 +169,21 @@ AC.ui = (() => {
 
       const badge = createBadge(product);
 
-      // Clé de tri : rareté en priorité, puis nombre d'avis en tiebreaker
+      // Clé de tri : rareté en priorité.
+      // Au-dessus de 4.5 (epic/legendary) : 4.7/4.8/4.9/5.0 équivalents, 4.5/4.6 équivalents
+      //   → départage uniquement par nombre d'avis.
+      // En dessous de 4.5 (rare/common/trash/garbage) : chaque 0.1 de note est une vraie
+      //   perte de qualité → on trie d'abord par note (4.4, puis 4.3, ...), avis en tiebreaker.
       const RARITY_LEVEL = { legendary: 5, epic: 4, rare: 3, common: 2, trash: 1, garbage: 0 };
       const rarityLevel = product.rarity ? (RARITY_LEVEL[product.rarity.key] ?? -1) : -1;
-      const sortKey = rarityLevel * 1000000 + (product.reviewCount || 0);
+      const cappedReviews = Math.min(product.reviewCount || 0, 999999);
+      let sortKey = rarityLevel * 1e8;
+      if (rarityLevel <= 3 && product.rating != null) {
+        // Note à 0.1 près (ex. 4.4 → 44), prioritaire sur les avis dans ce palier.
+        sortKey += Math.round(product.rating * 10) * 1e6 + cappedReviews;
+      } else {
+        sortKey += cappedReviews;
+      }
       product.el.setAttribute('data-ac-score', sortKey);
       product.el.setAttribute('data-ac-rank', product.originalRank);
 
